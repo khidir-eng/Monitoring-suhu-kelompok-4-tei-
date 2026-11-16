@@ -1,1 +1,249 @@
+ <!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<title>Monitoring Suhu Kelompok 4 TEI</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+    background: #101827;
+    color: white;
+}
+
+.container {
+    max-width: 650px;
+    margin: auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+header h1 {
+    font-size: 25px;
+    margin-bottom: 8px;
+}
+
+header p {
+    color: #aab7ca;
+}
+
+.card {
+    background: #1c293b;
+    border: 1px solid #34445c;
+    border-radius: 15px;
+    padding: 22px;
+    margin-bottom: 16px;
+}
+
+.temperature {
+    text-align: center;
+}
+
+.temperature h2 {
+    color: #aab7ca;
+    font-size: 17px;
+}
+
+#suhu {
+    font-size: 65px;
+    font-weight: bold;
+    margin: 15px 0;
+}
+
+#status {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-weight: bold;
+    background: #167c45;
+}
+
+.indicators {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.indicator {
+    background: #26364c;
+    padding: 17px;
+    border-radius: 12px;
+    text-align: center;
+}
+
+.indicator p {
+    color: #aab7ca;
+}
+
+.indicator strong {
+    font-size: 19px;
+}
+
+#update {
+    color: #aab7ca;
+    font-size: 13px;
+    text-align: center;
+}
+
+footer {
+    text-align: center;
+    color: #8291a8;
+    font-size: 12px;
+    margin-top: 25px;
+}
+
+@media(max-width: 400px) {
+    #suhu {
+        font-size: 52px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+    <h1>MONITORING SUHU</h1>
+    <p>Kelompok 4 TEI</p>
+</header>
+
+<div class="card temperature">
+    <h2>SUHU TERKINI</h2>
+    <div id="suhu">-- °C</div>
+    <div id="status">MENUNGGU DATA</div>
+</div>
+
+<div class="card">
+    <h3>Status Perangkat</h3>
+
+    <div class="indicators">
+
+        <div class="indicator">
+            <p>LED Merah</p>
+            <strong id="merah">--</strong>
+        </div>
+
+        <div class="indicator">
+            <p>LED Hijau</p>
+            <strong id="hijau">--</strong>
+        </div>
+
+        <div class="indicator">
+            <p>Buzzer</p>
+            <strong id="buzzer">--</strong>
+        </div>
+
+        <div class="indicator">
+            <p>Status Sistem</p>
+            <strong id="sistem">--</strong>
+        </div>
+
+    </div>
+</div>
+
+<div class="card">
+    <p id="update">Menunggu pembaruan data...</p>
+</div>
+
+<footer>
+    Monitoring Suhu Kelompok 4 TEI<br>
+    ESP32 | DHT11 | ThingSpeak
+</footer>
+
+</div>
+
+<script>
+
+// GANTI dengan Channel ID ThingSpeak milikmu
+const CHANNEL_ID = "3578067";
+
+// Mengambil data terbaru dari ThingSpeak
+async function loadData() {
+
+    try {
+
+        const url =
+        `https://api.thingspeak.com/channels/${CHANNEL_ID}/feeds/last.json`;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error("Gagal mengambil data");
+        }
+
+        const data = await response.json();
+
+        const suhu = parseFloat(data.field1);
+
+        if (Number.isNaN(suhu)) {
+            throw new Error("Data suhu tidak valid");
+        }
+
+        const merah = data.field3;
+        const hijau = data.field4;
+        const buzzer = data.field5;
+
+        const tinggi = suhu >= 35;
+
+        document.getElementById("suhu").textContent =
+            suhu.toFixed(1) + " °C";
+
+        const status = document.getElementById("status");
+
+        status.textContent = tinggi ?
+            "SUHU TINGGI" : "SUHU NORMAL";
+
+        status.style.background = tinggi ?
+            "#b83232" : "#167c45";
+
+        document.getElementById("merah").textContent =
+            merah == 1 ? "MENYALA" : "MATI";
+
+        document.getElementById("hijau").textContent =
+            hijau == 1 ? "MENYALA" : "MATI";
+
+        document.getElementById("buzzer").textContent =
+            buzzer == 1 ? "AKTIF" : "NONAKTIF";
+
+        document.getElementById("sistem").textContent =
+            "ONLINE";
+
+        const waktu = new Date(data.created_at);
+
+        document.getElementById("update").textContent =
+            "Data terakhir: " + waktu.toLocaleString("id-ID");
+
+    } catch (error) {
+
+        document.getElementById("sistem").textContent =
+            "OFFLINE";
+
+        console.error(error);
+
+    }
+
+}
+
+// Pembaruan pertama
+loadData();
+
+// Pembaruan otomatis setiap 5 detik
+setInterval(loadData, 5000);
+
+</script>
+
+</body>
+</html>
